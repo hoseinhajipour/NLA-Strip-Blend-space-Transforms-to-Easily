@@ -65,7 +65,31 @@ def update_transform(self, context):
     for track in obj.animation_data.nla_tracks:
         for strip in track.strips:
             if strip.select and strip.action:
-                apply_transform_to_bone(strip.action, bone_name, location, rotation)
+                action = strip.action
+                # Check and create keyframes if they don't exist
+                create_keyframes_if_missing(action, bone_name)
+                apply_transform_to_bone(action, bone_name, location, rotation)
+
+def create_keyframes_if_missing(action, bone_name):
+    """Create keyframes for location and rotation if they do not exist."""
+    fcurve_location_exists = any(
+        bone_name in fcurve.data_path and 'location' in fcurve.data_path
+        for fcurve in action.fcurves
+    )
+    fcurve_rotation_exists = any(
+        bone_name in fcurve.data_path and 'rotation_euler' in fcurve.data_path
+        for fcurve in action.fcurves
+    )
+
+    if not fcurve_location_exists:
+        # Create location keyframes if they do not exist
+        for i in range(3):
+            action.fcurves.new(data_path=f'pose.bones["{bone_name}"].location', index=i)
+
+    if not fcurve_rotation_exists:
+        # Create rotation keyframes if they do not exist
+        for i in range(3):
+            action.fcurves.new(data_path=f'pose.bones["{bone_name}"].rotation_euler', index=i)
 
 def get_bone_names(self, context):
     """Get a list of bone names for the dropdown menu."""
