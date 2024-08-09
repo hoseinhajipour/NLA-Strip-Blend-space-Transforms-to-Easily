@@ -66,30 +66,34 @@ def update_transform(self, context):
         for strip in track.strips:
             if strip.select and strip.action:
                 action = strip.action
-                # Check and create keyframes if they don't exist
+                # Create keyframes at frame 0 if they don't exist
                 create_keyframes_if_missing(action, bone_name)
                 apply_transform_to_bone(action, bone_name, location, rotation)
 
 def create_keyframes_if_missing(action, bone_name):
-    """Create keyframes for location and rotation if they do not exist."""
-    fcurve_location_exists = any(
-        bone_name in fcurve.data_path and 'location' in fcurve.data_path
-        for fcurve in action.fcurves
-    )
-    fcurve_rotation_exists = any(
-        bone_name in fcurve.data_path and 'rotation_euler' in fcurve.data_path
-        for fcurve in action.fcurves
-    )
+    """Create keyframes for location and rotation if they do not exist at frame zero."""
+    fcurve_location_exists = False
+    fcurve_rotation_exists = False
+    
+    # Check if location and rotation keyframes exist for the bone
+    for fcurve in action.fcurves:
+        if bone_name in fcurve.data_path:
+            if 'location' in fcurve.data_path:
+                fcurve_location_exists = True
+            if 'rotation_euler' in fcurve.data_path:
+                fcurve_rotation_exists = True
 
+    # Create location keyframes at frame zero if they do not exist
     if not fcurve_location_exists:
-        # Create location keyframes if they do not exist
         for i in range(3):
-            action.fcurves.new(data_path=f'pose.bones["{bone_name}"].location', index=i)
-
+            fcurve = action.fcurves.new(data_path=f'pose.bones["{bone_name}"].location', index=i)
+            fcurve.keyframe_points.insert(frame=0, value=0.0)
+    
+    # Create rotation keyframes at frame zero if they do not exist
     if not fcurve_rotation_exists:
-        # Create rotation keyframes if they do not exist
         for i in range(3):
-            action.fcurves.new(data_path=f'pose.bones["{bone_name}"].rotation_euler', index=i)
+            fcurve = action.fcurves.new(data_path=f'pose.bones["{bone_name}"].rotation_euler', index=i)
+            fcurve.keyframe_points.insert(frame=0, value=0.0)
 
 def get_bone_names(self, context):
     """Get a list of bone names for the dropdown menu."""
